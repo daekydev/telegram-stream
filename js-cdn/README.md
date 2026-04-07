@@ -55,6 +55,51 @@ npm start
 
 Web panel: `http://localhost:3000/`
 
+## Docker ile Çalıştırma
+
+```bash
+cd js-cdn
+docker build -t telegram-video-cdn .
+docker run --rm -p 8080:8080 --env-file .env telegram-video-cdn
+```
+
+Container içinde `yt-dlp` ve `ffmpeg` otomatik kurulur (`Dockerfile`).
+
+## Fly.io Deploy
+
+1. Fly CLI kur:
+```bash
+curl -L https://fly.io/install.sh | sh
+fly auth login
+```
+
+2. Uygulamayı oluştur (ilk kez):
+```bash
+cd js-cdn
+fly launch --no-deploy
+```
+
+3. Secret değerlerini gir:
+```bash
+fly secrets set \
+  MONGODB_URI=\"mongodb+srv://...\" \
+  MONGODB_DB=\"telegram_video_cdn\" \
+  TELEGRAM_BOT_TOKEN=\"123456:ABC\" \
+  TELEGRAM_TARGET_CHAT_ID=\"-1001234567890\" \
+  PUBLIC_BASE_URL=\"https://<your-app>.fly.dev\"
+```
+
+4. Deploy:
+```bash
+fly deploy
+```
+
+5. Log/health kontrol:
+```bash
+fly logs
+curl https://<your-app>.fly.dev/health
+```
+
 ## API Kullanımı
 
 ### 1) URL ingest
