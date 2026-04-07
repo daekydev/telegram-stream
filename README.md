@@ -92,3 +92,9 @@ Orignal Tgindex Developer [@odysseusmax](https://tx.me/odysseusmax).
 
 ## License
 Code released under [The GNU General Public License](LICENSE).
+
+
+## JavaScript Rewrite
+
+A new Node.js implementation for Telegram video CDN is available under `js-cdn/`.
+See `js-cdn/README.md` for setup and API usage.
