@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
+import axios from 'axios';
 import express from 'express';
 import multer from 'multer';
 import pinoHttp from 'pino-http';
@@ -132,7 +133,24 @@ app.get('/watch/:publicId/:quality', async (req, res) => {
   }
 
   const fileUrl = await getFileUrl(variant.telegram.fileId);
-  return res.redirect(fileUrl);
+  const range = req.headers.range;
+
+  const upstream = await axios.get(fileUrl, {
+    responseType: 'stream',
+    headers: range ? { Range: range } : undefined,
+    validateStatus: (status) => status >= 200 && status < 400
+  });
+
+  const passthroughHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'];
+  for (const header of passthroughHeaders) {
+    const value = upstream.headers[header];
+    if (value) {
+      res.setHeader(header, value);
+    }
+  }
+
+  res.status(upstream.status);
+  upstream.data.pipe(res);
 });
 
 app.get('/player/:publicId', (req, res) => {

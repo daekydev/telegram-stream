@@ -74,6 +74,7 @@ Panel: `http://SUNUCU_IP:8080`
 
 > Not: URL ingest tarafında `yt-dlp` kullanılmaz, özel extractor sınıfları kullanılır.
 > Not 2: OK.ru için native kalite dosyaları direkt yüklenir (transcode yok). Sibnet için kaynak kalite + 2 düşük kalite üretilir.
+> Not 3: `/watch/...` endpoint'i artık Bot API dosyasını uygulama üzerinden proxy stream eder; internal Bot API URL dışarıya redirect edilmez.
 
 ## Docker (Sadece app container)
 
