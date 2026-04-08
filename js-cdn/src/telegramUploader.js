@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import TelegramBot from 'node-telegram-bot-api';
 import { config } from './config.js';
 
-export const bot = new TelegramBot(config.telegramBotToken, { polling: false });
+export const bot = new TelegramBot(config.telegramBotToken, {
+  polling: false,
+  baseApiUrl: config.telegramApiBaseUrl
+});
 
 export async function uploadVariantsToTelegram({ title, sourceKey, variants }) {
   const results = [];
@@ -49,5 +52,6 @@ export async function uploadVariantsToTelegram({ title, sourceKey, variants }) {
 
 export async function getFileUrl(fileId) {
   const file = await bot.getFile(fileId);
-  return `https://api.telegram.org/file/bot${config.telegramBotToken}/${file.file_path}`;
+  const base = config.telegramApiBaseUrl.replace(/\/+$/, '');
+  return `${base}/file/bot${config.telegramBotToken}/${file.file_path}`;
 }
