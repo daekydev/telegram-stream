@@ -127,6 +127,8 @@ fly deploy -c fly.toml -a telegram-stream
 
 Eğer `ENOTFOUND telegram-stream-botapi.internal` hatası alırsan botapi app'i deploy edilmemiştir veya aynı Fly organization içinde değildir.
 
+Eğer `getFile ... file is too big` hatası alırsan Bot API server `--local` modda çalışmıyordur; botapi servisini bu repo içindeki `Dockerfile.botapi`/`docker-compose.yml` ile yeniden deploy et.
+
 ## API Akışı (Job tabanlı)
 
 - `POST /ingest/url` → `jobId` döner

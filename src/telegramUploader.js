@@ -73,7 +73,17 @@ export async function uploadVariantsToTelegram({ title, sourceKey, variants }) {
 }
 
 export async function getFileUrl(fileId) {
-  const file = await bot.getFile(fileId);
-  const base = config.telegramApiBaseUrl.replace(/\/+$/, '');
-  return `${base}/file/bot${config.telegramBotToken}/${file.file_path}`;
+  try {
+    const file = await bot.getFile(fileId);
+    const base = config.telegramApiBaseUrl.replace(/\/+$/, '');
+    return `${base}/file/bot${config.telegramBotToken}/${file.file_path}`;
+  } catch (error) {
+    if (String(error.message || '').includes('file is too big')) {
+      throw new Error(
+        'getFile failed with "file is too big". This means your Bot API endpoint is not running in --local mode. ' +
+          'Redeploy botapi server with --local (Dockerfile.botapi / docker-compose already configured).'
+      );
+    }
+    throw error;
+  }
 }
