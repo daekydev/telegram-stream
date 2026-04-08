@@ -17,6 +17,7 @@ export const config = {
   mongoDb: process.env.MONGODB_DB,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
   telegramTargetChatId: process.env.TELEGRAM_TARGET_CHAT_ID,
+  telegramApiBaseUrl: process.env.TELEGRAM_API_BASE_URL ?? 'https://api.telegram.org',
   ffmpegPath: process.env.FFMPEG_PATH,
   ffprobePath: process.env.FFPROBE_PATH,
   ytDlpPath: process.env.YTDLP_PATH ?? 'yt-dlp',
