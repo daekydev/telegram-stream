@@ -19,7 +19,6 @@ export const config = {
   telegramTargetChatId: process.env.TELEGRAM_TARGET_CHAT_ID,
   ffmpegPath: process.env.FFMPEG_PATH,
   ffprobePath: process.env.FFPROBE_PATH,
-  ytDlpPath: process.env.YTDLP_PATH ?? 'yt-dlp',
   tempDir: path.resolve(process.env.TEMP_DIR ?? './tmp'),
   uploadDir: path.resolve(process.env.UPLOAD_DIR ?? './storage'),
   maxUploadBytes: Number(process.env.MAX_UPLOAD_MB ?? 2048) * 1024 * 1024,

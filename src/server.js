@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { v4 as uuidv4 } from 'uuid';
 import express from 'express';
 import multer from 'multer';
 import pinoHttp from 'pino-http';
@@ -22,6 +23,30 @@ const upload = multer({
   limits: { fileSize: config.maxUploadBytes }
 });
 const baseUrl = process.env.PUBLIC_BASE_URL || `http://localhost:${config.port}`;
+const jobs = new Map();
+
+function updateJob(jobId, patch) {
+  const prev = jobs.get(jobId) || {};
+  jobs.set(jobId, {
+    ...prev,
+    ...patch,
+    updatedAt: new Date().toISOString()
+  });
+}
+
+function createJob(type) {
+  const jobId = uuidv4();
+  jobs.set(jobId, {
+    id: jobId,
+    type,
+    status: 'queued',
+    progress: 0,
+    message: 'Kuyruğa alındı',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+  return jobId;
+}
 
 app.get('/health', async (_, res) => {
   await connectDb();
@@ -39,8 +64,12 @@ app.post('/ingest/url', async (req, res) => {
   }
 
   try {
-    const doc = await processFromUrl(url);
-    return res.status(201).json(doc);
+    const jobId = createJob('url');
+    void processFromUrl(url, (evt) => updateJob(jobId, { status: 'processing', ...evt }))
+      .then((doc) => updateJob(jobId, { status: 'done', progress: 100, result: doc }))
+      .catch((error) => updateJob(jobId, { status: 'error', error: error.message }));
+
+    return res.status(202).json({ jobId, statusUrl: `/jobs/${jobId}` });
   } catch (error) {
     req.log.error({ err: error }, 'url ingest failed');
     return res.status(500).json({ error: error.message });
@@ -53,12 +82,22 @@ app.post('/ingest/upload', upload.single('video'), async (req, res) => {
   }
 
   try {
-    const doc = await processFromUpload(req.file);
-    return res.status(201).json(doc);
+    const jobId = createJob('upload');
+    void processFromUpload(req.file, (evt) => updateJob(jobId, { status: 'processing', ...evt }))
+      .then((doc) => updateJob(jobId, { status: 'done', progress: 100, result: doc }))
+      .catch((error) => updateJob(jobId, { status: 'error', error: error.message }));
+
+    return res.status(202).json({ jobId, statusUrl: `/jobs/${jobId}` });
   } catch (error) {
     req.log.error({ err: error }, 'upload ingest failed');
     return res.status(500).json({ error: error.message });
   }
+});
+
+app.get('/jobs/:jobId', (req, res) => {
+  const job = jobs.get(req.params.jobId);
+  if (!job) return res.status(404).json({ error: 'job_not_found' });
+  return res.json(job);
 });
 
 app.get('/videos/:sourceKey', async (req, res) => {

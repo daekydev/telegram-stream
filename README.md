@@ -4,7 +4,7 @@ Bu repo artık JavaScript/Node.js tabanlı Telegram video CDN uygulamasını roo
 
 ## Özellikler
 
-- URL ile ingest (`/ingest/url`) — `yt-dlp` ile kaynak platformdan video çekme (OK.ru, Sibnet vb.).
+- URL ile ingest (`/ingest/url`) — özel extractor ile **yalnızca OK.ru ve Sibnet** desteği.
 - Direkt dosya upload ingest (`/ingest/upload`) — multipart form-data ile video alma.
 - 3 kalite standardı: **1080p / 720p / 360p**.
   - Kaynakta mevcut kalite varsa doğrudan kullanır.
@@ -12,6 +12,7 @@ Bu repo artık JavaScript/Node.js tabanlı Telegram video CDN uygulamasını roo
 - Telegram'a kalite bazlı ayrı upload.
 - Her kalite için Telegram `file_id`, `message_id`, çözünürlük, süre ve boyut bilgisini MongoDB'de kalıcı saklama.
 - Web panel (`/`) ile upload + kalıcı link kopyalama.
+- Web panelde job ilerleme yüzdesi (% tamamlandı) takibi.
 - Kalıcı izleme linkleri:
   - `/watch/:publicId/:quality`
   - `/player/:publicId`
@@ -29,7 +30,7 @@ cp .env.example .env
 - `TELEGRAM_TARGET_CHAT_ID`
 - `MONGODB_URI`
 - `MONGODB_DB`
-- (opsiyonel) `FFMPEG_PATH`, `FFPROBE_PATH`, `YTDLP_PATH`
+- (opsiyonel) `FFMPEG_PATH`, `FFPROBE_PATH`
 - (opsiyonel) `PUBLIC_BASE_URL`
 
 ## Çalıştırma
@@ -40,6 +41,13 @@ npm start
 
 Web panel: `http://localhost:3000/`
 
+## Desteklenen URL Kaynakları
+
+- `ok.ru` (çoğu durumda çoklu kalite linkleri alınır)
+- `sibnet` (tek kalite gelir, sistem 1080/720/360 üretir)
+
+> Not: URL ingest tarafında `yt-dlp` kullanılmaz, özel extractor sınıfları kullanılır.
+
 ## Docker ile Çalıştırma
 
 ```bash
@@ -47,7 +55,7 @@ docker build -t telegram-video-cdn .
 docker run --rm -p 8080:8080 --env-file .env telegram-video-cdn
 ```
 
-Docker image içinde `ffmpeg` ve `yt-dlp` Debian paketlerinden yüklenir (PEP 668/pip problemi yaşamaz).
+Docker image içinde sadece gerekli sistem bağımlılıkları (`ffmpeg`) yüklenir.
 
 ## Fly.io Deploy
 
@@ -61,6 +69,12 @@ fly secrets set \
   PUBLIC_BASE_URL="https://<your-app>.fly.dev"
 fly deploy
 ```
+
+## API Akışı (Job tabanlı)
+
+- `POST /ingest/url` → `jobId` döner
+- `POST /ingest/upload` → `jobId` döner
+- `GET /jobs/:jobId` → progress/status/result döner
 
 ## Not
 

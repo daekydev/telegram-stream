@@ -14,17 +14,21 @@ function toPublicId(sourceKey) {
   return crypto.createHash('sha1').update(sourceKey).digest('base64url').slice(0, 14);
 }
 
-export async function processFromUrl(url) {
-  const input = await downloadFromUrl(url);
+export async function processFromUrl(url, onProgress = () => {}) {
+  onProgress({ step: 'init', progress: 1, message: 'İşlem başlatıldı' });
+  const input = await downloadFromUrl(url, onProgress);
   try {
+    onProgress({ step: 'transcode', progress: 60, message: 'Kaliteler hazırlanıyor...' });
     const variants = await ensureThreeQualities(input);
+    onProgress({ step: 'upload', progress: 78, message: 'Telegram yükleme başlıyor...' });
     const uploaded = await uploadVariantsToTelegram({
       title: input.title,
       sourceKey: input.sourceKey,
       variants
     });
+    onProgress({ step: 'persist', progress: 96, message: 'MongoDB kaydı yapılıyor...' });
 
-    return upsertVideo({
+    const doc = await upsertVideo({
       publicId: toPublicId(input.sourceKey),
       sourceKey: input.sourceKey,
       sourceType: 'url',
@@ -38,22 +42,28 @@ export async function processFromUrl(url) {
       },
       variants: uploaded
     });
+    onProgress({ step: 'done', progress: 100, message: 'Tamamlandı' });
+    return doc;
   } finally {
     await cleanupDirectory(input.workingDir);
   }
 }
 
-export async function processFromUpload(file) {
+export async function processFromUpload(file, onProgress = () => {}) {
+  onProgress({ step: 'init', progress: 1, message: 'Yükleme işleniyor...' });
   const input = await importLocalUpload(file);
   try {
+    onProgress({ step: 'transcode', progress: 35, message: 'Kaliteler hazırlanıyor...' });
     const variants = await ensureThreeQualities(input);
+    onProgress({ step: 'upload', progress: 75, message: 'Telegram yükleme başlıyor...' });
     const uploaded = await uploadVariantsToTelegram({
       title: input.title,
       sourceKey: input.sourceKey,
       variants
     });
+    onProgress({ step: 'persist', progress: 95, message: 'MongoDB kaydı yapılıyor...' });
 
-    return upsertVideo({
+    const doc = await upsertVideo({
       publicId: toPublicId(input.sourceKey),
       sourceKey: input.sourceKey,
       sourceType: 'upload',
@@ -64,6 +74,8 @@ export async function processFromUpload(file) {
       },
       variants: uploaded
     });
+    onProgress({ step: 'done', progress: 100, message: 'Tamamlandı' });
+    return doc;
   } finally {
     await cleanupDirectory(input.workingDir);
   }
