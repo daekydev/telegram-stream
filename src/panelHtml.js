@@ -111,7 +111,11 @@ async function watchJob(jobId){
     const res = await fetch('/jobs/' + encodeURIComponent(jobId));
     const job = await res.json();
     writeResult(job);
-    setProgress(job.progress || 0, job.message || job.status);
+    let statusMsg = job.message || job.status;
+    if (job.transcode?.quality) {
+      statusMsg += ' • ' + job.transcode.quality + 'p (' + (job.transcode.qualityProgress || 0) + '%)';
+    }
+    setProgress(job.progress || 0, statusMsg);
 
     if (job.status === 'done') {
       clearInterval(pollTimer);

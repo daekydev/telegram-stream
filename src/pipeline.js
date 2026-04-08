@@ -19,7 +19,22 @@ export async function processFromUrl(url, onProgress = () => {}) {
   const input = await downloadFromUrl(url, onProgress);
   try {
     onProgress({ step: 'transcode', progress: 60, message: 'Kaliteler hazırlanıyor...' });
-    const variants = await ensureThreeQualities(input);
+    const variants = await ensureThreeQualities(input, ({ quality, index, total, percent, message }) => {
+      const perQualitySpan = 20 / total;
+      const start = 60 + index * perQualitySpan;
+      const mapped = Math.min(80, Math.round(start + (perQualitySpan * percent) / 100));
+      onProgress({
+        step: 'transcode',
+        progress: mapped,
+        transcode: {
+          quality,
+          qualityIndex: index + 1,
+          totalQualities: total,
+          qualityProgress: Math.round(percent)
+        },
+        message
+      });
+    });
     onProgress({ step: 'upload', progress: 78, message: 'Telegram yükleme başlıyor...' });
     const uploaded = await uploadVariantsToTelegram({
       title: input.title,
@@ -54,7 +69,22 @@ export async function processFromUpload(file, onProgress = () => {}) {
   const input = await importLocalUpload(file);
   try {
     onProgress({ step: 'transcode', progress: 35, message: 'Kaliteler hazırlanıyor...' });
-    const variants = await ensureThreeQualities(input);
+    const variants = await ensureThreeQualities(input, ({ quality, index, total, percent, message }) => {
+      const perQualitySpan = 35 / total;
+      const start = 35 + index * perQualitySpan;
+      const mapped = Math.min(70, Math.round(start + (perQualitySpan * percent) / 100));
+      onProgress({
+        step: 'transcode',
+        progress: mapped,
+        transcode: {
+          quality,
+          qualityIndex: index + 1,
+          totalQualities: total,
+          qualityProgress: Math.round(percent)
+        },
+        message
+      });
+    });
     onProgress({ step: 'upload', progress: 75, message: 'Telegram yükleme başlıyor...' });
     const uploaded = await uploadVariantsToTelegram({
       title: input.title,

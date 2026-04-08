@@ -13,6 +13,7 @@ Bu repo artık JavaScript/Node.js tabanlı Telegram video CDN uygulamasını roo
 - Her kalite için Telegram `file_id`, `message_id`, çözünürlük, süre ve boyut bilgisini MongoDB'de kalıcı saklama.
 - Web panel (`/`) ile upload + kalıcı link kopyalama.
 - Web panelde job ilerleme yüzdesi (% tamamlandı) takibi.
+- Transcode aşamasında kalite bazlı ilerleme (örn. 720p %42) gösterimi.
 - Kalıcı izleme linkleri:
   - `/watch/:publicId/:quality`
   - `/player/:publicId`
