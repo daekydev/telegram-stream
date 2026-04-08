@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { config } from './config.js';
 import { execFilePromise } from './process.js';
 import { Odnoklassniki } from './extractors/odnoklassniki.js';
-import { extractSibnetVideoUrl } from './extractors/sibnet.js';
+import { buildSibnetHeaders, extractSibnetVideoUrl } from './extractors/sibnet.js';
 
 function sanitizeTitle(title) {
   return (title || 'video').replace(/[^a-z0-9_-]+/gi, '_').slice(0, 80);
@@ -25,11 +25,28 @@ function qualityToHeight(quality) {
 }
 
 async function downloadMp4(url, outputPath, headers = {}, onProgress = () => {}) {
-  const response = await axios.get(url, {
-    responseType: 'stream',
-    headers,
-    maxRedirects: 5
-  });
+  const attempts = [
+    { ...headers },
+    { ...headers, Referer: undefined, Origin: undefined },
+    {}
+  ];
+  let response;
+  let lastError;
+
+  for (const attemptHeaders of attempts) {
+    try {
+      response = await axios.get(url, {
+        responseType: 'stream',
+        headers: attemptHeaders,
+        maxRedirects: 5,
+        validateStatus: (s) => s >= 200 && s < 400
+      });
+      break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  if (!response) throw lastError;
 
   const total = Number(response.headers['content-length'] || 0);
   let downloaded = 0;
@@ -95,7 +112,12 @@ export async function downloadFromUrl(url, onProgress = () => {}) {
       if (v.type === 'm3u8') {
         await downloadM3u8(v.url, outputPath, (p) => onProgress({ step: 'download', progress: base + Math.floor(p * 0.15), message: `HLS indiriliyor (${v.quality})` }));
       } else {
-        await downloadMp4(v.url, outputPath, { Referer: data.referer }, (p) =>
+        await downloadMp4(v.url, outputPath, {
+          Referer: data.referer || 'https://ok.ru/',
+          Origin: 'https://ok.ru',
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+        }, (p) =>
           onProgress({ step: 'download', progress: base + Math.floor(p * 0.15), message: `MP4 indiriliyor (${v.quality})` })
         );
       }
@@ -126,7 +148,7 @@ export async function downloadFromUrl(url, onProgress = () => {}) {
     const outputPath = path.join(baseDir, `${title}_source.mp4`);
 
     onProgress({ step: 'download', progress: 10, message: 'Sibnet video indiriliyor...' });
-    await downloadMp4(directUrl, outputPath, { Referer: url }, (p) =>
+    await downloadMp4(directUrl, outputPath, buildSibnetHeaders({ referer: url }), (p) =>
       onProgress({ step: 'download', progress: 10 + Math.floor(p * 0.5), message: `Sibnet indiriliyor (%${p})` })
     );
 
