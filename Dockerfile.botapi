@@ -1,0 +1,5 @@
+FROM aiogram/telegram-bot-api:latest
+
+RUN mkdir -p /var/lib/telegram-bot-api/tmp
+
+CMD sh -c "telegram-bot-api --http-port=8081 --local --api-id=$TELEGRAM_API_ID --api-hash=$TELEGRAM_API_HASH --dir=/var/lib/telegram-bot-api --temp-dir=/var/lib/telegram-bot-api/tmp"

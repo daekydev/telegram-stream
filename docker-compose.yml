@@ -1,0 +1,45 @@
+version: '3.9'
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: telegram-stream-mongo
+    restart: unless-stopped
+    command: ["--wiredTigerCacheSizeGB", "0.5"]
+    volumes:
+      - mongo_data:/data/db
+
+  telegram-bot-api:
+    image: aiogram/telegram-bot-api:latest
+    container_name: telegram-bot-api
+    restart: unless-stopped
+    command: >
+      --http-port=8081
+      --local
+      --api-id=${TELEGRAM_API_ID}
+      --api-hash=${TELEGRAM_API_HASH}
+      --dir=/var/lib/telegram-bot-api
+      --temp-dir=/var/lib/telegram-bot-api/tmp
+      --max-webhook-connections=100
+    volumes:
+      - telegram_bot_api_data:/var/lib/telegram-bot-api
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - mongo
+      - telegram-bot-api
+    env_file: .env
+    environment:
+      TELEGRAM_API_BASE_URL: ${TELEGRAM_API_BASE_URL:-http://telegram-bot-api:8081}
+      MONGODB_URI: ${MONGODB_URI:-mongodb://mongo:27017}
+      MONGODB_DB: ${MONGODB_DB:-telegram_video_cdn}
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+
+volumes:
+  telegram_bot_api_data:
+  mongo_data:
