@@ -22,21 +22,33 @@ export async function uploadVariantsToTelegram({ title, sourceKey, variants }) {
     }
 
     const caption = `${title}\n${variant.quality}p\nsource:${sourceKey}`.slice(0, 1024);
-    const msg = await bot.sendVideo(
-      config.telegramTargetChatId,
-      fs.createReadStream(variant.path),
-      {
-        caption,
-        supports_streaming: true,
-        width: variant.width,
-        height: variant.height,
-        duration: Math.round(variant.duration || 0)
-      },
-      {
-        filename: `${sourceKey.replace(/[^a-z0-9_-]/gi, '_')}_${variant.quality}p.mp4`,
-        contentType: 'video/mp4'
+    let msg;
+    try {
+      msg = await bot.sendVideo(
+        config.telegramTargetChatId,
+        fs.createReadStream(variant.path),
+        {
+          caption,
+          supports_streaming: true,
+          width: variant.width,
+          height: variant.height,
+          duration: Math.round(variant.duration || 0)
+        },
+        {
+          filename: `${sourceKey.replace(/[^a-z0-9_-]/gi, '_')}_${variant.quality}p.mp4`,
+          contentType: 'video/mp4'
+        }
+      );
+    } catch (error) {
+      if (String(error.message || '').includes('ENOTFOUND') && config.telegramApiBaseUrl.includes('.internal')) {
+        throw new Error(
+          `Cannot resolve ${config.telegramApiBaseUrl}. ` +
+            'Fly internal DNS works only if botapi app is deployed in same org. ' +
+            'Either deploy telegram-stream-botapi app or set TELEGRAM_API_BASE_URL=https://api.telegram.org'
+        );
       }
-    );
+      throw error;
+    }
 
     results.push({
       quality: variant.quality,

@@ -45,6 +45,28 @@ npm start
 
 Web panel: `http://localhost:3000/`
 
+## Tek Sunucuda Full Kurulum (Önerilen, 2GB upload için)
+
+Tüm servisler aynı repoda ve aynı sunucuda çalışır:
+- `app` (panel + API)
+- `telegram-bot-api` (`--local` mode, büyük dosya için)
+- `mongo`
+
+Sadece `.env` içine şu 4 alanı gerçek değerlerle girmen yeterli:
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_TARGET_CHAT_ID`
+- `TELEGRAM_API_ID`
+- `TELEGRAM_API_HASH`
+
+Sonra tek komut:
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+```
+
+Panel: `http://SUNUCU_IP:8080`
+
 ## Desteklenen URL Kaynakları
 
 - `ok.ru` (çoğu durumda çoklu kalite linkleri alınır)
@@ -53,27 +75,18 @@ Web panel: `http://localhost:3000/`
 > Not: URL ingest tarafında `yt-dlp` kullanılmaz, özel extractor sınıfları kullanılır.
 > Not 2: OK.ru için native kalite dosyaları direkt yüklenir (transcode yok). Sibnet için kaynak kalite + 2 düşük kalite üretilir.
 
-## Docker ile Çalıştırma
+## Docker (Sadece app container)
 
 ```bash
 docker build -t telegram-video-cdn .
 docker run --rm -p 8080:8080 --env-file .env telegram-video-cdn
 ```
 
-Docker image içinde sadece gerekli sistem bağımlılıkları (`ffmpeg`) yüklenir.
+> Bu modda local Bot API/Mongo ayrıca kurulmalı. Tek sunucu için `docker compose` yöntemi önerilir.
 
-## Local Bot API (2GB upload için önerilen kurulum)
+## Local Bot API notu
 
-Bu repoda hazır `docker-compose.yml` var. App + local Telegram Bot API birlikte ayağa kalkar:
-
-```bash
-cp .env.example .env
-docker compose up --build -d
-```
-
-Local Bot API server `--local` ile çalışır ve büyük dosya (2GB seviyesine kadar) yükleme için uygundur.
-
-> Önemli: `TELEGRAM_API_ID` ve `TELEGRAM_API_HASH` alanlarını gerçek değerlerle doldurun (my.telegram.org).
+Compose içinde `telegram-bot-api` servisi `--local` ile çalışır; bu sayede büyük dosya upload senaryosu için uygundur.
 
 ## Resmi Hosted Bot API limiti
 
@@ -106,6 +119,13 @@ fly secrets set \
   -a telegram-stream
 fly deploy -c fly.toml -a telegram-stream
 ```
+
+### Hangi değeri gireceğim? (`TELEGRAM_API_BASE_URL`)
+
+- **Bot API app kurduysan**: `http://telegram-stream-botapi.internal:8081`
+- **Bot API app kurmadıysan**: `https://api.telegram.org`
+
+Eğer `ENOTFOUND telegram-stream-botapi.internal` hatası alırsan botapi app'i deploy edilmemiştir veya aynı Fly organization içinde değildir.
 
 ## API Akışı (Job tabanlı)
 
