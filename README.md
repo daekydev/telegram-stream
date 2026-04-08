@@ -45,9 +45,10 @@ Web panel: `http://localhost:3000/`
 ## Desteklenen URL Kaynakları
 
 - `ok.ru` (çoğu durumda çoklu kalite linkleri alınır)
-- `sibnet` (tek kalite gelir, sistem 1080/720/360 üretir)
+- `sibnet` (tek kalite gelir, sistem kaynak kalite + 2 düşük kalite üretir)
 
 > Not: URL ingest tarafında `yt-dlp` kullanılmaz, özel extractor sınıfları kullanılır.
+> Not 2: OK.ru için native kalite dosyaları direkt yüklenir (transcode yok). Sibnet için kaynak kalite + 2 düşük kalite üretilir.
 
 ## Docker ile Çalıştırma
 

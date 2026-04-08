@@ -14,6 +14,17 @@ function ffprobeAsync(filePath) {
   });
 }
 
+async function probeVideo(filePath) {
+  const probe = await ffprobeAsync(filePath);
+  const videoStream = probe.streams.find((stream) => stream.codec_type === 'video');
+  return {
+    width: videoStream?.width,
+    height: videoStream?.height,
+    duration: Number(probe.format.duration ?? 0),
+    size: Number(probe.format.size ?? 0)
+  };
+}
+
 async function transcodeToHeight(inputPath, outputPath, height, onProgress = () => {}) {
   return new Promise((resolve, reject) => {
     ffmpeg(inputPath)
@@ -48,7 +59,88 @@ function pickBestSource(downloaded, targetHeight) {
   return withHeight[withHeight.length - 1];
 }
 
+function mapQualityToHeight(quality) {
+  const q = String(quality || '').toUpperCase();
+  const match = q.match(/(\d{3,4})P/);
+  if (match) return Number(match[1]);
+  if (q.includes('FULL') || q.includes('FHD') || q.includes('ULTRA')) return 1080;
+  if (q === 'HD') return 720;
+  if (q === 'SD') return 480;
+  if (q === 'LOW' || q === 'MOBILE') return 360;
+  return null;
+}
+
+function targetsForSibnet(sourceHeight) {
+  const ladder = [1080, 720, 480, 360, 240];
+  const base = ladder.find((h) => sourceHeight >= h) || sourceHeight;
+  const lowers = ladder.filter((h) => h < base).slice(0, 2);
+  return [base, ...lowers];
+}
+
+async function finalizeVariants(variants) {
+  for (const variant of variants) {
+    const info = await probeVideo(variant.path);
+    variant.width = info.width;
+    variant.height = info.height;
+    variant.duration = info.duration;
+    variant.size = info.size;
+  }
+  return variants;
+}
+
+async function handleOkru(input, onProgress) {
+  const variants = [];
+  const total = Math.min(3, input.downloaded.length);
+
+  for (let i = 0; i < total; i++) {
+    const source = input.downloaded[i];
+    variants.push({
+      quality: source.height || mapQualityToHeight(source.quality) || 0,
+      path: source.path,
+      generated: false,
+      from: source.source
+    });
+    onProgress({ quality: variants[i].quality, index: i, total, percent: 100, message: `${variants[i].quality}p hazır (OK.ru native)` });
+  }
+
+  return finalizeVariants(variants);
+}
+
+async function handleSibnet(input, onProgress) {
+  const source = input.downloaded[0];
+  const sourceInfo = await probeVideo(source.path);
+  const sourceHeight = sourceInfo.height || 720;
+  const targets = targetsForSibnet(sourceHeight);
+
+  const variants = [];
+  for (let i = 0; i < targets.length; i++) {
+    const target = targets[i];
+    if (target === targets[0]) {
+      variants.push({ quality: target, path: source.path, generated: false, from: source.source });
+      onProgress({ quality: target, index: i, total: targets.length, percent: 100, message: `${target}p kaynak kalite hazır` });
+      continue;
+    }
+
+    const outPath = path.join(input.workingDir, `${target}p.mp4`);
+    await transcodeToHeight(source.path, outPath, target, (percent) =>
+      onProgress({ quality: target, index: i, total: targets.length, percent, message: `${target}p transcode devam ediyor` })
+    );
+    variants.push({ quality: target, path: outPath, generated: true, from: source.source });
+    onProgress({ quality: target, index: i, total: targets.length, percent: 100, message: `${target}p transcode tamamlandı` });
+  }
+
+  return finalizeVariants(variants);
+}
+
 export async function ensureThreeQualities(input, onProgress = () => {}) {
+  if (input.extractor === 'okru') {
+    return handleOkru(input, onProgress);
+  }
+
+  if (input.extractor === 'sibnet') {
+    return handleSibnet(input, onProgress);
+  }
+
   const variants = [];
 
   for (const quality of config.qualities) {
@@ -78,14 +170,5 @@ export async function ensureThreeQualities(input, onProgress = () => {}) {
     onProgress({ quality, index, total: config.qualities.length, percent: 100, message: `${quality}p transcode tamamlandı` });
   }
 
-  for (const variant of variants) {
-    const probe = await ffprobeAsync(variant.path);
-    const videoStream = probe.streams.find((stream) => stream.codec_type === 'video');
-    variant.width = videoStream?.width;
-    variant.height = videoStream?.height;
-    variant.duration = Number(probe.format.duration ?? 0);
-    variant.size = Number(probe.format.size ?? 0);
-  }
-
-  return variants;
+  return finalizeVariants(variants);
 }
