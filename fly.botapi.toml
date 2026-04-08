@@ -1,0 +1,19 @@
+app = "telegram-stream-botapi"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.botapi"
+
+[env]
+  PORT = "8081"
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  auto_stop_machines = "off"
+  auto_start_machines = true
+  min_machines_running = 1
+
+[mounts]
+  source = "botapi_data"
+  destination = "/var/lib/telegram-bot-api"
