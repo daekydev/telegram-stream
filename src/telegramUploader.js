@@ -76,7 +76,36 @@ export async function getFileUrl(fileId) {
   try {
     const file = await bot.getFile(fileId);
     const base = config.telegramApiBaseUrl.replace(/\/+$/, '');
-    return `${base}/file/bot${config.telegramBotToken}/${file.file_path}`;
+    const normalizedPath = String(file.file_path || '').replace(/\\/g, '/');
+    const relativePath = normalizedPath.replace(/^\/+/, '');
+
+    if (!normalizedPath) {
+      throw new Error(`Telegram getFile returned empty file_path for fileId: ${fileId}`);
+    }
+    const encodePathSegments = (value) =>
+      value
+        .split('/')
+        .filter(Boolean)
+        .map((segment) => encodeURIComponent(segment))
+        .join('/');
+
+    const encodedRelativePath = encodePathSegments(relativePath);
+    const encodedAbsolutePath = encodePathSegments(normalizedPath);
+
+    const candidates = [
+      `${base}/file/bot${config.telegramBotToken}/${relativePath}`,
+      `${base}/file/bot${config.telegramBotToken}/${encodedRelativePath}`,
+      `${base}/file/bot${config.telegramBotToken}/${fileId}`
+    ];
+
+    if (normalizedPath.startsWith('/')) {
+      candidates.push(`${base}/file/bot${config.telegramBotToken}/${normalizedPath}`);
+      candidates.push(`${base}/file/bot${config.telegramBotToken}/${encodedAbsolutePath}`);
+      candidates.push(`${base}/file/bot${config.telegramBotToken}//${relativePath}`);
+      candidates.push(`${base}/file/bot${config.telegramBotToken}//${encodedRelativePath}`);
+    }
+
+    return [...new Set(candidates)];
   } catch (error) {
     if (String(error.message || '').includes('file is too big')) {
       throw new Error(

@@ -132,14 +132,28 @@ app.get('/watch/:publicId/:quality', async (req, res) => {
     return res.status(404).json({ error: 'quality_not_found' });
   }
 
-  const fileUrl = await getFileUrl(variant.telegram.fileId);
+  const fileUrls = await getFileUrl(variant.telegram.fileId);
   const range = req.headers.range;
+  let upstream;
+  let lastError;
 
-  const upstream = await axios.get(fileUrl, {
-    responseType: 'stream',
-    headers: range ? { Range: range } : undefined,
-    validateStatus: (status) => status >= 200 && status < 400
-  });
+  for (const fileUrl of fileUrls) {
+    try {
+      upstream = await axios.get(fileUrl, {
+        responseType: 'stream',
+        headers: range ? { Range: range } : undefined,
+        validateStatus: (status) => status >= 200 && status < 400
+      });
+      break;
+    } catch (error) {
+      lastError = error;
+      req.log.warn({ err: error, fileUrl }, 'telegram file URL failed, trying next candidate');
+    }
+  }
+
+  if (!upstream) {
+    throw lastError || new Error('Unable to fetch Telegram file from any URL candidate');
+  }
 
   const passthroughHeaders = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'];
   for (const header of passthroughHeaders) {
