@@ -4,8 +4,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends ffmpeg python3 python3-pip ca-certificates \
-  && pip3 install --no-cache-dir yt-dlp \
+  && apt-get install -y --no-install-recommends ffmpeg yt-dlp ca-certificates \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -17,7 +16,7 @@ COPY . .
 ENV PORT=8080 \
     FFMPEG_PATH=/usr/bin/ffmpeg \
     FFPROBE_PATH=/usr/bin/ffprobe \
-    YTDLP_PATH=/usr/local/bin/yt-dlp
+    YTDLP_PATH=/usr/bin/yt-dlp
 
 EXPOSE 8080
 CMD ["npm", "start"]

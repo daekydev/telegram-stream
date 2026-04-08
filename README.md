@@ -47,6 +47,8 @@ docker build -t telegram-video-cdn .
 docker run --rm -p 8080:8080 --env-file .env telegram-video-cdn
 ```
 
+Docker image içinde `ffmpeg` ve `yt-dlp` Debian paketlerinden yüklenir (PEP 668/pip problemi yaşamaz).
+
 ## Fly.io Deploy
 
 ```bash
