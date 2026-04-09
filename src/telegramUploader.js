@@ -76,7 +76,8 @@ export async function getFileUrl(fileId) {
   try {
     const file = await bot.getFile(fileId);
     const base = config.telegramApiBaseUrl.replace(/\/+$/, '');
-    return `${base}/file/bot${config.telegramBotToken}/${file.file_path}`;
+    const filePath = (file.file_path || '').replace(/^\/+/, '');
+    return `${base}/file/bot${config.telegramBotToken}/${filePath}`;
   } catch (error) {
     if (String(error.message || '').includes('file is too big')) {
       throw new Error(

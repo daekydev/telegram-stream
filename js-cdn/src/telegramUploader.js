@@ -49,5 +49,6 @@ export async function uploadVariantsToTelegram({ title, sourceKey, variants }) {
 
 export async function getFileUrl(fileId) {
   const file = await bot.getFile(fileId);
-  return `https://api.telegram.org/file/bot${config.telegramBotToken}/${file.file_path}`;
+  const filePath = (file.file_path || '').replace(/^\/+/, '');
+  return `https://api.telegram.org/file/bot${config.telegramBotToken}/${filePath}`;
 }
